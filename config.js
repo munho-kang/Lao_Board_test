@@ -9,7 +9,7 @@
 //
 //  ⚠️ 주소 끝에 슬래시(/)나 /api 는 붙이지 마세요.
 //
-const RENDER_API_URL = 'https://여기에-Render-주소를-붙여넣으세요.onrender.com';
+const RENDER_API_URL = 'https://lao-board-test.onrender.com';
 //
 // ============================================================
 //  아래는 수정할 필요 없습니다.
