@@ -1,16 +1,13 @@
-const API_BASE = '/api/posts';
+// 백엔드 주소는 config.js에서 설정합니다.
+const API_BASE = `${window.API_BASE_URL}/api/posts`;
 const postsContainer = document.getElementById('postsContainer');
 const postForm = document.getElementById('postForm');
+const submitBtn = postForm.querySelector('button[type="submit"]');
 
 async function fetchPosts() {
-  try {
-    const response = await fetch(API_BASE);
-    if (!response.ok) throw new Error('Failed to fetch posts');
-    return await response.json();
-  } catch (error) {
-    console.error('Error fetching posts:', error);
-    return [];
-  }
+  const response = await fetch(API_BASE);
+  if (!response.ok) throw new Error('Failed to fetch posts');
+  return await response.json();
 }
 
 async function createPost(postData) {
@@ -76,6 +73,27 @@ function renderPosts(posts) {
   });
 }
 
+function renderLoading() {
+  postsContainer.innerHTML = `
+    <div class="state-box">
+      <div class="spinner"></div>
+      <p>게시글을 불러오는 중입니다...</p>
+      <p class="state-hint">서버가 잠들어 있었다면 깨어나는 데 최대 1분이 걸릴 수 있습니다.</p>
+    </div>
+  `;
+}
+
+function renderError(message, hint) {
+  postsContainer.innerHTML = `
+    <div class="state-box state-error">
+      <p>${escapeHtml(message)}</p>
+      ${hint ? `<p class="state-hint">${escapeHtml(hint)}</p>` : ''}
+      <button type="button" class="btn btn-primary" id="retryBtn">다시 시도</button>
+    </div>
+  `;
+  document.getElementById('retryBtn').addEventListener('click', loadPosts);
+}
+
 function escapeHtml(text) {
   const div = document.createElement('div');
   div.textContent = text;
@@ -97,12 +115,18 @@ async function handleSubmit(e) {
     return;
   }
 
+  submitBtn.disabled = true;
+  submitBtn.textContent = '등록 중...';
+
   try {
     await createPost(postData);
     postForm.reset();
     loadPosts();
   } catch (error) {
-    alert('게시글 등록에 실패했습니다.');
+    alert('게시글 등록에 실패했습니다. 서버 연결을 확인해주세요.');
+  } finally {
+    submitBtn.disabled = false;
+    submitBtn.textContent = '등록';
   }
 }
 
@@ -119,8 +143,26 @@ async function handleDelete(e) {
 }
 
 async function loadPosts() {
-  const posts = await fetchPosts();
-  renderPosts(posts);
+  if (!window.API_CONFIGURED) {
+    renderError(
+      '백엔드 주소가 아직 설정되지 않았습니다.',
+      'config.js 파일을 열어 Render에서 받은 주소를 입력한 뒤 다시 푸시해주세요.'
+    );
+    return;
+  }
+
+  renderLoading();
+
+  try {
+    const posts = await fetchPosts();
+    renderPosts(posts);
+  } catch (error) {
+    console.error('Error fetching posts:', error);
+    renderError(
+      '서버에 연결하지 못했습니다.',
+      '잠시 후 다시 시도해주세요. 계속 실패한다면 config.js의 주소와 Render 서비스 상태를 확인해주세요.'
+    );
+  }
 }
 
 postForm.addEventListener('submit', handleSubmit);
